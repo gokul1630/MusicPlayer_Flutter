@@ -1,9 +1,10 @@
-import 'dart:typed_data';
+import 'dart:async';
+
 import 'package:assets_audio_player/assets_audio_player.dart';
-import 'package:audio_manager/audio_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_audio_query/flutter_audio_query.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'player/PositionSeekWidget.dart';
 
 void main() {
   runApp(
@@ -34,6 +35,18 @@ class _PlayerState extends State<Player> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
+        // appBar: AppBar(
+        //   actions: [
+        //     IconButton(
+        //       onPressed: () => Navigator.push(
+        //           context,
+        //           MaterialPageRoute(
+        //             builder: (context) => Play(),
+        //           )),
+        //       icon: Icon(Icons.play_circle_fill_outlined),
+        //     ),
+        //   ],
+        // ),
         body: FutureBuilder(
           future: audioQuery.getSongs(),
           builder: (context, snapshot) {
@@ -56,17 +69,21 @@ class SongWidget extends StatefulWidget {
   final List<SongInfo> songList;
 
   @override
-  _SongWidgetState createState() => _SongWidgetState(songList: this.songList);
+  _SongWidgetState createState() => _SongWidgetState();
 }
 
 class _SongWidgetState extends State<SongWidget> {
   final audioPlayer = AssetsAudioPlayer();
-  _SongWidgetState({this.songList});
 
-  final List<SongInfo> songList;
+  FlutterAudioQuery audioQuery = FlutterAudioQuery();
 
   int currentIndex = 0;
-  var songs = [];
+  int id;
+  @override
+  void initState() {
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -96,46 +113,55 @@ class _SongWidgetState extends State<SongWidget> {
                 size: 30,
               ),
               label: 'Artists'),
+          // BottomNavigationBarItem(
+          //     icon: Icon(
+          //       Icons.play_arrow,
+          //       size: 30,
+          //     ),
+          //     label: 'Play'),
         ],
       ),
       body: IndexedStack(
         index: currentIndex,
         children: [
           ListView.builder(
-            shrinkWrap: true,
-            itemCount: songList?.length ?? 0,
+            itemCount: widget.songList.length ?? 0,
             itemBuilder: (_, idx) {
-              SongInfo song = songList[idx];
-              songs.add(song.filePath);
               return Card(
                 child: ListTile(
-                  title: Text('${song.title}'),
+                  title: Text('${widget.songList[idx].title}'),
                   leading: FutureBuilder(
-                    future: FlutterAudioQuery().getArtwork(
-                        type: ResourceType.ARTIST, id: song.artistId),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData)
+                    future: audioQuery.getArtwork(
+                        type: ResourceType.SONG, id: widget.songList[idx].id),
+                    builder: (context, snap) {
+                      if (snap.data == null) return CircularProgressIndicator();
+                      if (snap.data.isEmpty)
                         return CircleAvatar(
-                          child: Image.memory(snapshot.data),
+                          child: Image.asset('icons/icon.png'),
                           backgroundColor: Colors.white10,
                         );
                       return CircleAvatar(
-                        child: Image.asset('icons/icon.png'),
+                        child: Image.memory(snap.data),
                         backgroundColor: Colors.white10,
                       );
                     },
                   ),
                   onTap: () {
                     audioPlayer.stop();
+                    print(widget.songList[idx].toString());
+                    setState(() {
+                      id = idx;
+                      audioPlayer
+                          .open(Audio.file(widget.songList[id].filePath));
+                    });
+
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => Play(
-                          image: song.artistId,
-                          name: song.title,
-                          songpath: song.filePath,
                           audioPlayer: audioPlayer,
-                          songList: songList,
+                          songList: widget.songList,
+                          id: idx,
                         ),
                       ),
                     );
@@ -145,25 +171,26 @@ class _SongWidgetState extends State<SongWidget> {
             },
           ),
           FutureBuilder<List<AlbumInfo>>(
-            future: FlutterAudioQuery().getAlbums(),
+            future: audioQuery.getAlbums(),
             builder: (_, snap) {
               return ListView.builder(
-                shrinkWrap: true,
                 itemCount: snap.data?.length ?? 0,
                 itemBuilder: (_, idx) {
                   AlbumInfo albumInfo = snap.data[idx];
                   return ListTile(
                     leading: FutureBuilder(
                       future: FlutterAudioQuery().getArtwork(
-                          type: ResourceType.ALBUM, id: albumInfo.id),
+                          type: ResourceType.ALBUM, id: snap.data[idx].id),
                       builder: (_, snap) {
-                        if (snap.hasData)
+                        if (snap.data == null)
+                          return CircularProgressIndicator();
+                        if (snap.data.isEmpty)
                           return CircleAvatar(
-                            child: Image.memory(snap.data),
+                            child: Image.asset('icons/icon.png'),
                             backgroundColor: Colors.white10,
                           );
                         return CircleAvatar(
-                          child: Image.asset('icons/icon.png'),
+                          child: Image.memory(snap.data),
                           backgroundColor: Colors.white10,
                         );
                       },
@@ -177,7 +204,7 @@ class _SongWidgetState extends State<SongWidget> {
             },
           ),
           FutureBuilder<List<ArtistInfo>>(
-            future: FlutterAudioQuery().getArtists(),
+            future: audioQuery.getArtists(),
             builder: (_, snap) {
               return ListView.builder(
                 shrinkWrap: true,
@@ -197,6 +224,11 @@ class _SongWidgetState extends State<SongWidget> {
               );
             },
           ),
+          // Play(
+          //   audioPlayer: audioPlayer,
+          //   id: id ?? 0,
+          //   songList: widget.songList ?? null,
+          // ),
         ],
       ),
     );
@@ -204,188 +236,191 @@ class _SongWidgetState extends State<SongWidget> {
 }
 
 class Play extends StatefulWidget {
-  Play({this.name, this.image, this.songpath, this.audioPlayer, this.songList});
+  Play({this.audioPlayer, this.songList, this.id});
 
-  final image;
-  final name;
-  final songpath;
-  List songList;
-  final AssetsAudioPlayer audioPlayer;
+  int id;
+  final List songList;
+  final audioPlayer;
 
   @override
   _PlayState createState() => _PlayState();
 }
 
 class _PlayState extends State<Play> {
-  bool isplay = false;
-  int path = 0;
-  List<AudioInfo> songs = [];
-  var duration;
-  var icon = Icon(
-    Icons.pause_circle_filled,
-    size: 50.0,
-  );
-
-  AudioManager audioManager;
-
   @override
   void initState() {
     super.initState();
-    audioManager = AudioManager.instance;
-    audioManager.audioList = songs;
-    isplay = true;
+    // p
+    print('============init===========');
+  }
 
-    play();
+  @override
+  void dispose() {
+    super.dispose();
+    print('========disposed=========');
   }
 
   play() {
-    setState(() {
-      //     audioPlayer.updateCurrentAudioNotification(
-      //       metas: Metas(title: name),
-      //     );
-      //     audioPlayer.open(
-      //       Audio.file(songpath),
-      //       showNotification: true,
-      //       notificationSettings: NotificationSettings(
-      //           customNextAction: (player) => next(),
-      //           customPrevAction: (player) => previous(),
-      //           seekBarEnabled: false),
-      //     );
-      audioManager.start('file://${widget.songpath}', widget.name);
-    });
+    widget.audioPlayer.open(
+      Audio.file(widget.songList[widget.id].filePath),
+    );
   }
 
   void next() {
     setState(() {
-      //     path++;
-      //     play();
-      //     print(songList.length);
-      // audioManager.next();
+      if (widget.id <= widget.songList.length) widget.id++;
+      Future.delayed(Duration(milliseconds: 100)).then((value) => play());
     });
   }
 
-  // void previous() {
-  //   setState(() {
-  //     if (path > 0) {
-  //       path--;
-  //       play();
-  //     }
-  //     print(audioPlayer.current.value.audio.duration);
-  //   });
-  // }
+  void previous() {
+    setState(() {
+      if (widget.id > 0) {
+        widget.id--;
+        Future.delayed(Duration(milliseconds: 100)).then((value) => play());
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Scaffold(
-        body: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Center(
-              child: FutureBuilder<Uint8List>(
-                future: FlutterAudioQuery()
-                    .getArtwork(type: ResourceType.ARTIST, id: widget.image),
-                builder: (context, snapshot) {
-                  if (snapshot.hasData)
-                    return CircleAvatar(
-                      child: Image.memory(snapshot.data),
-                      radius: 100.0,
-                      backgroundColor: Colors.white10,
-                    );
-                  return CircleAvatar(
-                    child: Image.asset('icons/icon.png'),
-                    backgroundColor: Colors.white10,
-                  );
-                },
-              ),
-            ),
-            SizedBox(
-              height: 30.0,
-            ),
-            Center(
-              child: Text(
-                '${widget.name}',
-                style: TextStyle(
-                  fontSize: 20.0,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+      child: WillPopScope(
+        onWillPop: () {
+          Navigator.pop(context);
+          return null;
+        },
+        child: Scaffold(
+          // appBar: AppBar(),
+          body: SingleChildScrollView(
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                Container(
+                  height: 500,
+                  width: 500,
+                  child: FutureBuilder(
+                    future: FlutterAudioQuery().getArtwork(
+                        type: ResourceType.SONG,
+                        id: widget.songList[widget.id].id),
+                    builder: (_, snap) {
+                      if (snap.data == null)
+                        return Container(
+                            child: CircularProgressIndicator(),
+                            height: 200,
+                            width: 200);
+                      if (snap.data.isEmpty)
+                        return Container(
+                            child: Image.asset('icons/icon.png'),
+                            height: 200,
+                            width: 200);
+                      return Container(
+                          child: Image.memory(snap.data, scale: 1.5),
+                          height: 200,
+                          width: 200);
+                    },
+                  ),
+                ),
+                SizedBox(height: 20.0),
                 Center(
-                  child: IconButton(
-                      color: Colors.amber,
+                  child: Text(
+                      widget.id == null
+                          ? ''
+                          : '${widget.songList[widget.id].title}',
+                      style: TextStyle(fontSize: 25.0),
+                      textAlign: TextAlign.center),
+                ),
+                SizedBox(
+                  height: 10.0,
+                ),
+                Center(
+                  child: Text(
+                      widget.id == null
+                          ? ''
+                          : '${widget.songList[widget.id].artist}',
+                      style: TextStyle(fontSize: 15.0),
+                      textAlign: TextAlign.center),
+                ),
+                SizedBox(
+                  height: 10.0,
+                ),
+                Center(
+                  child: Text(
+                      widget.id == null
+                          ? ''
+                          : '${widget.songList[widget.id].album}',
+                      style: TextStyle(fontSize: 15.0),
+                      textAlign: TextAlign.center),
+                ),
+                SizedBox(height: 20.0),
+                PlayerBuilder.realtimePlayingInfos(
+                    player: widget.audioPlayer,
+                    builder: (_, d) {
+                      return PositionSeekWidget(
+                          currentPosition: d.currentPosition == null
+                              ? Duration(seconds: 0)
+                              : d.currentPosition,
+                          duration: d.duration == null
+                              ? Duration(seconds: 0)
+                              : d.duration,
+                          seekTo: (d) {
+                            widget.audioPlayer.seek(d ?? Duration(seconds: 0));
+                          });
+                    }),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                        color: Colors.blue,
+                        icon: Icon(
+                          Icons.arrow_left,
+                          size: 50.0,
+                        ),
+                        onPressed: () {
+                          previous();
+                        }),
+                    SizedBox(
+                      width: 25,
+                    ),
+                    PlayerBuilder.isPlaying(
+                        player: widget.audioPlayer,
+                        builder: (_, snap) {
+                          return IconButton(
+                              color: Colors.blue,
+                              icon: snap == true
+                                  ? Icon(
+                                      Icons.pause_circle_filled,
+                                      size: 50.0,
+                                    )
+                                  : Icon(
+                                      Icons.play_circle_fill_outlined,
+                                      size: 50.0,
+                                    ),
+                              onPressed: () {
+                                widget.audioPlayer.playOrPause();
+
+                                snap = !snap;
+                              });
+                        }),
+                    SizedBox(
+                      width: 25,
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        next();
+                      },
+                      color: Colors.blue,
                       icon: Icon(
-                        Icons.arrow_left,
+                        Icons.arrow_right,
                         size: 50.0,
                       ),
-                      onPressed: () {
-                        // previous();
-                      }),
-                ),
-                Center(
-                  child: IconButton(
-                      color: Colors.amber,
-                      icon: icon,
-                      onPressed: () {
-                        widget.audioPlayer.playOrPause();
-                        setState(() {
-                          isplay = !isplay;
-
-                          isplay == true
-                              ? icon = Icon(
-                                  Icons.pause_circle_filled,
-                                  size: 50.0,
-                                )
-                              : icon = Icon(
-                                  Icons.play_circle_fill_outlined,
-                                  size: 50.0,
-                                );
-                        });
-                      }),
-                ),
-                Center(
-                  child: IconButton(
-                    onPressed: () {
-                      setState(() {
-                        // next();
-                      });
-                    },
-                    color: Colors.amber,
-                    icon: Icon(
-                      Icons.arrow_right,
-                      size: 50.0,
                     ),
-                  ),
+                  ],
                 ),
-                Center(
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.stop,
-                      color: Colors.red,
-                      size: 50.0,
-                    ),
-                    onPressed: () {
-                      widget.audioPlayer.stop();
-                      isplay = false;
-                      setState(() {
-                        icon = Icon(
-                          Icons.play_circle_fill_outlined,
-                          size: 50.0,
-                        );
-                      });
-                    },
-                  ),
-                )
               ],
             ),
-            SizedBox(
-              height: 30.0,
-            ),
-          ],
+          ),
         ),
       ),
     );

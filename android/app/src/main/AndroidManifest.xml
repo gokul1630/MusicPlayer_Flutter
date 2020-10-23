@@ -4,7 +4,6 @@
 <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
    <application
         android:requestLegacyExternalStorage="true"
-        android:usesCleartextTraffic="true"
         android:label="audio"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -41,5 +40,6 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+            
     </application>
 </manifest>
