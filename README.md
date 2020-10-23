@@ -7,6 +7,7 @@ A new Flutter project.
   <img src="https://github.com/gokul1630/MusicPlayer_Flutter/blob/main/screenshots/Screenshot_20201020-092425157.jpg" width="200" height="400" />
   <img src="https://github.com/gokul1630/MusicPlayer_Flutter/blob/main/screenshots/Screenshot_20201020-092431189.jpg" width="200" height="400" /> 
   <img src="https://github.com/gokul1630/MusicPlayer_Flutter/blob/main/screenshots/Screenshot_20201020-092435046.jpg" width="200" height="400" />
+  <img src="https://github.com/gokul1630/MusicPlayer_Flutter/blob/main/screenshots/Screenshot_20201023-151317011.jpg" width="200" height="400" />
 </p>
 
 ## Getting Started
