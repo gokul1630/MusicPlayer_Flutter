@@ -2,6 +2,13 @@
 
 A new Flutter project.
 
+# Screenshots
+<p float="left">
+  <img src="https://github.com/gokul1630/MusicPlayer_Flutter/blob/main/screenshots/Screenshot_20201020-092425157.jpg" width="200" height="400" />
+  <img src="https://github.com/gokul1630/MusicPlayer_Flutter/blob/main/screenshots/Screenshot_20201020-092431189.jpg" width="200" height="400" /> 
+  <img src="https://github.com/gokul1630/MusicPlayer_Flutter/blob/main/screenshots/Screenshot_20201020-092435046.jpg" width="200" height="400" />
+</p>
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.
