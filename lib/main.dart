@@ -78,6 +78,7 @@ class _SongWidgetState extends State<SongWidget> {
   FlutterAudioQuery audioQuery = FlutterAudioQuery();
 
   int currentIndex = 0;
+  var data;
   int id;
   @override
   void initState() {
@@ -98,27 +99,33 @@ class _SongWidgetState extends State<SongWidget> {
           BottomNavigationBarItem(
               icon: Icon(
                 Icons.playlist_play,
+                color: Colors.white,
                 size: 30,
               ),
               label: 'Songs'),
           BottomNavigationBarItem(
               icon: Icon(
                 Icons.album,
+                color: Colors.white,
                 size: 30,
               ),
               label: 'Albums'),
           BottomNavigationBarItem(
+            backgroundColor: Colors.blue,
+            icon: Icon(
+              Icons.account_circle_outlined,
+              size: 30,
+              color: Colors.white,
+            ),
+            label: 'Artists',
+          ),
+          BottomNavigationBarItem(
               icon: Icon(
-                Icons.account_circle_outlined,
+                Icons.play_arrow,
                 size: 30,
+                color: Colors.white,
               ),
-              label: 'Artists'),
-          // BottomNavigationBarItem(
-          //     icon: Icon(
-          //       Icons.play_arrow,
-          //       size: 30,
-          //     ),
-          //     label: 'Play'),
+              label: 'Play'),
         ],
       ),
       body: IndexedStack(
@@ -134,6 +141,8 @@ class _SongWidgetState extends State<SongWidget> {
                     future: audioQuery.getArtwork(
                         type: ResourceType.SONG, id: widget.songList[idx].id),
                     builder: (context, snap) {
+                      data = snap.data;
+
                       if (snap.data == null) return CircularProgressIndicator();
                       if (snap.data.isEmpty)
                         return CircleAvatar(
@@ -141,7 +150,7 @@ class _SongWidgetState extends State<SongWidget> {
                           backgroundColor: Colors.white10,
                         );
                       return CircleAvatar(
-                        child: Image.memory(snap.data),
+                        child: Image.memory(data),
                         backgroundColor: Colors.white10,
                       );
                     },
@@ -150,21 +159,24 @@ class _SongWidgetState extends State<SongWidget> {
                     audioPlayer.stop();
                     print(widget.songList[idx].toString());
                     setState(() {
+                      Play().id = idx;
+                      Play().audioPlayer = audioPlayer;
+                      Play().songList = widget.songList;
                       id = idx;
                       audioPlayer
                           .open(Audio.file(widget.songList[id].filePath));
                     });
 
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => Play(
-                          audioPlayer: audioPlayer,
-                          songList: widget.songList,
-                          id: idx,
-                        ),
-                      ),
-                    );
+                    // Navigator.push(
+                    //   context,
+                    //   MaterialPageRoute(
+                    //     builder: (_) => Play(
+                    //       audioPlayer: audioPlayer,
+                    //       songList: widget.songList,
+                    //       id: idx,
+                    //     ),
+                    //   ),
+                    // );
                   },
                 ),
               );
@@ -224,11 +236,12 @@ class _SongWidgetState extends State<SongWidget> {
               );
             },
           ),
-          // Play(
-          //   audioPlayer: audioPlayer,
-          //   id: id ?? 0,
-          //   songList: widget.songList ?? null,
-          // ),
+          Play(
+            audioPlayer: audioPlayer,
+            id: id ?? 0,
+            songList: widget.songList ?? null,
+            audioQuery: audioQuery,
+          ),
         ],
       ),
     );
@@ -236,11 +249,12 @@ class _SongWidgetState extends State<SongWidget> {
 }
 
 class Play extends StatefulWidget {
-  Play({this.audioPlayer, this.songList, this.id});
+  Play({this.audioPlayer, this.songList, this.id, this.audioQuery});
 
   int id;
-  final List songList;
-  final audioPlayer;
+  List songList;
+  AssetsAudioPlayer audioPlayer;
+  FlutterAudioQuery audioQuery;
 
   @override
   _PlayState createState() => _PlayState();
@@ -250,7 +264,7 @@ class _PlayState extends State<Play> {
   @override
   void initState() {
     super.initState();
-    // p
+    widget.audioPlayer.playlistAudioFinished.listen((event) => next());
     print('============init===========');
   }
 
@@ -270,6 +284,7 @@ class _PlayState extends State<Play> {
     setState(() {
       if (widget.id <= widget.songList.length) widget.id++;
       Future.delayed(Duration(milliseconds: 100)).then((value) => play());
+      print(widget.id.toString());
     });
   }
 
@@ -287,11 +302,9 @@ class _PlayState extends State<Play> {
     return SafeArea(
       child: WillPopScope(
         onWillPop: () {
-          Navigator.pop(context);
           return null;
         },
         child: Scaffold(
-          // appBar: AppBar(),
           body: SingleChildScrollView(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -301,20 +314,25 @@ class _PlayState extends State<Play> {
                   height: 500,
                   width: 500,
                   child: FutureBuilder(
-                    future: FlutterAudioQuery().getArtwork(
+                    future: widget.audioQuery.getArtwork(
                         type: ResourceType.SONG,
                         id: widget.songList[widget.id].id),
                     builder: (_, snap) {
                       if (snap.data == null)
-                        return Container(
-                            child: CircularProgressIndicator(),
-                            height: 200,
-                            width: 200);
+                        return Center(
+                          child: Container(
+                              child: CircularProgressIndicator(),
+                              height: 30,
+                              width: 30),
+                        );
                       if (snap.data.isEmpty)
                         return Container(
-                            child: Image.asset('icons/icon.png'),
-                            height: 200,
-                            width: 200);
+                            child: Image.asset(
+                              'icons/icon.png',
+                              scale: 5.0,
+                            ),
+                            height: 50,
+                            width: 50);
                       return Container(
                           child: Image.memory(snap.data, scale: 1.5),
                           height: 200,
