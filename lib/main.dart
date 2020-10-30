@@ -97,6 +97,7 @@ class _SongWidgetState extends State<SongWidget> {
         },
         items: [
           BottomNavigationBarItem(
+              backgroundColor: Colors.blue,
               icon: Icon(
                 Icons.playlist_play,
                 color: Colors.white,
@@ -104,6 +105,7 @@ class _SongWidgetState extends State<SongWidget> {
               ),
               label: 'Songs'),
           BottomNavigationBarItem(
+              backgroundColor: Colors.blue,
               icon: Icon(
                 Icons.album,
                 color: Colors.white,
@@ -120,6 +122,7 @@ class _SongWidgetState extends State<SongWidget> {
             label: 'Artists',
           ),
           BottomNavigationBarItem(
+              backgroundColor: Colors.blue,
               icon: Icon(
                 Icons.play_arrow,
                 size: 30,
