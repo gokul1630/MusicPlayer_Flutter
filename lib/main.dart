@@ -159,9 +159,6 @@ class _SongWidgetState extends State<SongWidget> {
                     audioPlayer.stop();
                     print(widget.songList[idx].toString());
                     setState(() {
-                      Play().id = idx;
-                      Play().audioPlayer = audioPlayer;
-                      Play().songList = widget.songList;
                       id = idx;
                       audioPlayer
                           .open(Audio.file(widget.songList[id].filePath));
@@ -265,13 +262,6 @@ class _PlayState extends State<Play> {
   void initState() {
     super.initState();
     widget.audioPlayer.playlistAudioFinished.listen((event) => next());
-    print('============init===========');
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-    print('========disposed=========');
   }
 
   play() {
@@ -376,12 +366,11 @@ class _PlayState extends State<Play> {
                     player: widget.audioPlayer,
                     builder: (_, d) {
                       return PositionSeekWidget(
-                          currentPosition: d.currentPosition == null
+                          currentPosition: d == null
                               ? Duration(seconds: 0)
                               : d.currentPosition,
-                          duration: d.duration == null
-                              ? Duration(seconds: 0)
-                              : d.duration,
+                          duration:
+                              d == null ? Duration(seconds: 0) : d.duration,
                           seekTo: (d) {
                             widget.audioPlayer.seek(d ?? Duration(seconds: 0));
                           });
